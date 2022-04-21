@@ -1,0 +1,86 @@
+---
+output: 
+  pdf_document:
+    keep_tex: yes
+    fig_caption: yes
+    number_sections: yes
+geometry: margin=2.54cm
+title: "Insert title of project here"
+subtitle: "Web address for GitHub repository"
+author: "Name"
+fontsize: 12pt
+mainfont: Times New Roman
+
+---
+
+\newpage
+\tableofcontents 
+\newpage
+\listoftables 
+\newpage
+\listoffigures 
+\newpage
+
+```{r setup, include=FALSE}
+# Set your working directory
+
+setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProj")
+
+# Load your packages
+
+library(tidyverse)
+library(sf)
+library(knitr)
+library(data.table)
+library(scales)
+
+# Set your ggplot theme
+
+# Load your datasets
+
+coastal_disaster_data <- read.csv("./Data/Processed/finaldataset.csv")
+disaster_data_spatial <- read_sf("./Data/Processed/disaster_data_spatial.shp")
+
+disaster_data_spatial <- disaster_data_spatial %>%
+  rename(Income_Per_Cap = Inc_P_C, Number_MobileHomes = Nmbr_MH, Minority_Population_Percent = Mn_P_PC, FEMAAmountperpop = FEMAAmn)
+
+```
+
+
+# Rationale and Research Questions
+
+
+
+
+
+\newpage
+
+# Dataset Information
+
+
+
+\newpage
+
+# Exploratory Analysis 
+
+
+
+\newpage
+
+# Analysis
+
+
+
+## Question 1: <insert specific question here and add additional subsections for additional questions below, if needed>
+
+## Question 2: 
+
+
+
+
+\newpage
+
+# Summary and Conclusions
+
+
+
