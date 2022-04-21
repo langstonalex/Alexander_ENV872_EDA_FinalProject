@@ -1,0 +1,91 @@
+---
+title: "DataExploration"
+author: "Langston Alexander"
+date: "4/21/2022"
+output: html_document
+---
+
+```{r summary stats}
+
+library(knitr)
+library(data.table)
+summary_df <- summarise(coastal_disaster_data,
+                        Average_Pop = sum(POP)/20,
+                        Max_Pop = max(POP),
+                        Min_Pop = min(POP),
+                        Average_Minority_Percent = sum(Minority_Population_PerCap)/20,
+                        Max_Minority_Pop_Percent = max(Minority_Population_PerCap),
+                        Min_Minority_Pop_Percent = min(Minority_Population_PerCap),
+                        Average_Number_Mobile_Homes = sum(Number_MobileHomes)/20,
+                        Max_Number_Mobile_Homes = max(Number_MobileHomes),
+                        Min_Number_Mobile_Homes = min(Number_MobileHomes),
+                        Average_Income_PerCap = sum(Income_Per_Cap)/20,
+                        Max_Income_PerCap = max(Income_Per_Cap),
+                        Min_Income_PerCap = min(Income_Per_Cap),
+                        Average_HMA_Funding = sum(totalProjectAmount)/20,
+                        Max_HMA_Funding = max(totalProjectAmount),
+                        Min_HMA_Funding = min(totalProjectAmount))
+
+
+
+summary_df <- format(summary_df, scientific = F, digits = 2)
+
+summary_df_t <- data.frame(transpose(summary_df))
+
+rownames(summary_df_t) <- colnames(summary_df)
+colnames(summary_df_t)<- ""
+
+summary_df_t <- as.data.frame((summary_df_t))
+kable(summary_df_t, caption = "Summary Statistics for NC Coastal Counties")
+
+```
+
+```{r bar charts}
+library(scales)
+
+boxplot1 <- coastal_disaster_data
+boxplot1$COUNTY <- factor(boxplot1$COUNTY,                                   
+                  levels = boxplot1$COUNTY[order(boxplot1$totalProjectAmount, decreasing = TRUE)])
+
+ggplot(boxplot1)+
+  geom_bar(aes(x = COUNTY, y = totalProjectAmount,  fill = COUNTY), stat = "identity")+
+  scale_y_continuous(labels = comma)+
+  scale_fill_grey()+
+  theme(legend.position = "none")+
+  labs(title = "Total FEMA Funding for Hazard Mitigation By County", y = "FEMA Funding Amount (USD)")+
+  coord_flip()
+
+boxplot2 <- coastal_disaster_data
+boxplot2$COUNTY <- factor(boxplot2$COUNTY,                                   
+                  levels = boxplot2$COUNTY[order(boxplot2$Minority_Population_PerCap, decreasing = TRUE)])
+
+ggplot(boxplot2)+
+  geom_bar(aes(x = COUNTY, y = Minority_Population_PerCap,  fill = COUNTY), stat = "identity")+
+  scale_fill_grey()+
+  theme(legend.position = "none")+
+  labs(title = "Percent Minority By County", y = "Percent Minority Population")+
+  coord_flip()
+
+boxplot3 <- coastal_disaster_data
+boxplot3$COUNTY <- factor(boxplot3$COUNTY,                                   
+                  levels = boxplot3$COUNTY[order(boxplot3$Number_MobileHomes, decreasing = TRUE)])
+
+ggplot(boxplot3)+
+  geom_bar(aes(x = COUNTY, y = Number_MobileHomes,  fill = COUNTY), stat = "identity")+
+  scale_fill_grey()+
+  theme(legend.position = "none")+
+  labs(title = "Total Number of Mobile Homes By County", y = "Number of Mobile Homes")+
+  coord_flip()
+
+boxplot4 <- coastal_disaster_data
+boxplot4$COUNTY <- factor(boxplot4$COUNTY,                                   
+                  levels = boxplot4$COUNTY[order(boxplot4$Income_Per_Cap, decreasing = TRUE)])
+
+ggplot(boxplot4)+
+  geom_bar(aes(x = COUNTY, y = Income_Per_Cap,  fill = COUNTY ), stat = "identity")+
+  scale_fill_grey()+
+  theme(legend.position = "none")+
+  labs(title = "Income Per Capita By County", y = "Income Per Capita (USD)")+
+  coord_flip()
+```
+

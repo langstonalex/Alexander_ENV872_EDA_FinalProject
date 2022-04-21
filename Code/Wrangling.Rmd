@@ -1,0 +1,108 @@
+---
+title: "Data Wrangling"
+author: "Langston Alexander"
+date: "4/21/2022"
+output: html_document
+---
+
+```{r}
+
+library(tidyverse)
+library(tidycensus)
+
+getwd()
+setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProject")
+
+HMP <- read.csv("./Data/Raw/HazardMitigationAssistanceProjects.csv")
+
+HMP_NC <- HMP %>%
+  filter(state == "North Carolina")
+
+HMP_NC_ <- HMP_NC %>%
+  select(c(county, projectAmount, federalShareObligated, netValueBenefits))%>%
+  group_by(county)%>%
+  summarise(total_nvb = sum(netValueBenefits, na.rm = T), totalProjectAmount = sum(projectAmount, na.rm = T)) %>%
+  rename(COUNTY = county)
+
+HMP_NC_Benefits <- HMP_NC_[-c(1),]
+
+HMP_NC_Benefits <- HMP_NC_Benefits %>%
+  mutate(COUNTY = paste(COUNTY, "County"))
+
+
+
+
+County_race_2 <- read.csv("./Data/Raw/nhgis0001_ts_nominal_county.csv")
+
+County_race_3 <- County_race_2 %>%
+  filter(STATE == "North Carolina") %>%
+  rename(c(White_20=B18AA2020,  Black_20=B18AB2020,  AIAA_20=B18AC2020, API_20=B18AD2020))
+
+County_race_df <- County_race_3[,-c(1,2,3,4,6,7, 32:34)]
+
+County_race_df <- County_race_df%>%
+  select(c(COUNTY, White_20, Black_20, AIAA_20, API_20))
+
+
+
+
+Housing <- read.csv("./Data/Raw/nhgis0003_ds244_20195_county.csv")
+
+Housing <- Housing %>%
+  filter(STATE == "North Carolina") %>%
+  rename(Mobile_Home=AL0AE010)%>%
+  select(c(COUNTY, GEOID, Mobile_Home))
+
+
+
+Total_pop <- read.csv("./Data/Raw/County_Pop.csv")
+
+Total_pop$COUNTY <- gsub(", North Carolina", '', Total_pop$COUNTY)
+
+Total_pop$POP <- as.numeric(gsub(",", '', Total_pop$POP))
+
+
+
+incomePerCap <- read.csv("./Data/Raw/incomepercap.csv")
+
+incomePerCap <- incomePerCap %>%
+  filter(STATE == "North Carolina") %>%
+  rename(Inc_Per_Cap = ALX5E001)
+
+
+
+df_list <- list(County_race_df, HMP_NC_Benefits, Housing, Total_pop, incomePerCap)
+
+disaster_data <- df_list %>% reduce(full_join, by = 'COUNTY')
+
+disaster_data <- disaster_data[-c(101),]
+
+coastal_disaster_data <- disaster_data %>%
+  mutate(min_pop = (((Black_20+AIAA_20+API_20)/POP)*100)) %>%
+  mutate(FEMAAmountperpop = totalProjectAmount/POP) %>%
+  filter(COUNTY %in% c("Beaufort County", "Bertie County","Brunswick County", "Camden County", "Carteret County", "Chowan County", "Craven County", "Currituck County", "Dare County","Gates County", "Hertford County", "Hyde County", "New Hanover County", "Onslow County", "Pamlico County", "Pasquotank County", "Pender County", "Perquimans County","Tyrrell County", "Washington County")) %>%
+  select(-one_of("GEOID", "STATE"))%>%
+   rename(Income_Per_Cap = Inc_Per_Cap, Number_MobileHomes = Mobile_Home, Minority_Population_PerCap = min_pop)
+
+write_csv(coastal_disaster_data, "C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProject/Data/Processed/finaldataset.csv")
+
+```
+
+```{r spatial data}
+library(sf)
+library(mapview)
+setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProject")
+counties_sf<- st_read('./Data/Raw/cb_2018_us_county_20m.shp') %>% 
+  filter(STATEFP == 37) %>%
+  mutate(NAME = paste(NAME, "County"))
+
+ mapview(counties_sf)
+ 
+ disaster_data_spatial <- merge(counties_sf, coastal_disaster_data, by.x = "NAME", by.y = "COUNTY", all = T)
+ 
+ disaster_data_spatial <- disaster_data_spatial %>%
+    filter(NAME %in% c("Beaufort County", "Bertie County","Brunswick County", "Camden County", "Carteret County", "Chowan County", "Craven County", "Currituck County", "Dare County","Gates County", "Hertford County", "Hyde County", "New Hanover County", "Onslow County", "Pamlico County", "Pasquotank County", "Pender County", "Perquimans County","Tyrrell County", "Washington County"))
+ 
+```
+
+

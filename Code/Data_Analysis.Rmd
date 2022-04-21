@@ -1,0 +1,32 @@
+---
+title: "Data Analysis"
+author: "Langston Alexander"
+date: "4/21/2022"
+output: html_document
+---
+
+```{r setup, maps}
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Minority_Population_PerCap), alpha = 0.5, color = "red") +
+  labs(title = "Hazard Mitigation Assistance and Minority Population Percent", subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Number_MobileHomes), alpha = 0.5, color = "red")+
+  labs(title = "Hazard Mitigation Assistance Per Capita and Number of Mobile Homes", subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Income_Per_Cap), alpha = 0.5, color = "red")+
+  labs(title = "Hazard Mitigation Assistance and Income Per Capita", subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+```
+
+```{r regression}
+regression <- lm(FEMAAmountperpop ~ Minority_Population_PerCap + Income_Per_Cap + Number_MobileHomes, coastal_disaster_data)
+
+summary(regression)
+
+plot(regression)
+```
+
