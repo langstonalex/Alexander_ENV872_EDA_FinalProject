@@ -11,7 +11,7 @@ library(tidyverse)
 library(tidycensus)
 
 getwd()
-setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProject")
+setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProj")
 
 HMP <- read.csv("./Data/Raw/HazardMitigationAssistanceProjects.csv")
 
@@ -84,14 +84,14 @@ coastal_disaster_data <- disaster_data %>%
   select(-one_of("GEOID", "STATE"))%>%
    rename(Income_Per_Cap = Inc_Per_Cap, Number_MobileHomes = Mobile_Home, Minority_Population_PerCap = min_pop)
 
-write_csv(coastal_disaster_data, "C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProject/Data/Processed/finaldataset.csv")
+write_csv(coastal_disaster_data, "C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProj/Data/Processed/finaldataset.csv")
 
 ```
 
 ```{r spatial data}
 library(sf)
 library(mapview)
-setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProject")
+setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProj")
 counties_sf<- st_read('./Data/Raw/cb_2018_us_county_20m.shp') %>% 
   filter(STATEFP == 37) %>%
   mutate(NAME = paste(NAME, "County"))
@@ -102,6 +102,8 @@ counties_sf<- st_read('./Data/Raw/cb_2018_us_county_20m.shp') %>%
  
  disaster_data_spatial <- disaster_data_spatial %>%
     filter(NAME %in% c("Beaufort County", "Bertie County","Brunswick County", "Camden County", "Carteret County", "Chowan County", "Craven County", "Currituck County", "Dare County","Gates County", "Hertford County", "Hyde County", "New Hanover County", "Onslow County", "Pamlico County", "Pasquotank County", "Pender County", "Perquimans County","Tyrrell County", "Washington County"))
+
+st_write(disaster_data_spatial, "C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProj/Data/Processed/disaster_data_spatial.shp", driver = "ESRI Shapefile")
  
 ```
 
