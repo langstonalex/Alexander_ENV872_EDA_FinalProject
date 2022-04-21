@@ -27,6 +27,8 @@ regression <- lm(FEMAAmountperpop ~ Minority_Population_PerCap + Income_Per_Cap 
 
 summary(regression)
 
+par(mfrow = c(2,2))
 plot(regression)
+
 ```
 
