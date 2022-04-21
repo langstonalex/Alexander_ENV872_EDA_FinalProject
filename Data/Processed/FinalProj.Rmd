@@ -1,0 +1,196 @@
+---
+title: "FinalProject"
+author: "Langston Alexander"
+date: "4/8/2022"
+output: pdf_document
+---
+
+```{r}
+library(tidyverse)
+library(tidycensus)
+
+getwd()
+setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProject")
+
+HMP <- read.csv("./Data/Raw/HazardMitigationAssistanceProjects.csv")
+
+HMP_NC <- HMP %>%
+  filter(state == "North Carolina")
+
+HMP_NC_ <- HMP_NC %>%
+  select(c(county, projectAmount, federalShareObligated, netValueBenefits))%>%
+  group_by(county)%>%
+  summarise(total_nvb = sum(netValueBenefits, na.rm = T), totalProjectAmount = sum(projectAmount, na.rm = T)) %>%
+  rename(COUNTY = county)
+
+HMP_NC_Benefits <- HMP_NC_[-c(1),]
+
+HMP_NC_Benefits <- HMP_NC_Benefits %>%
+  mutate(COUNTY = paste(COUNTY, "County"))
+
+
+
+
+County_race_2 <- read.csv("./Data/Raw/nhgis0001_ts_nominal_county.csv")
+
+County_race_3 <- County_race_2 %>%
+  filter(STATE == "North Carolina") %>%
+  rename(c(White_20=B18AA2020,  Black_20=B18AB2020,  AIAA_20=B18AC2020, API_20=B18AD2020))
+
+County_race_df <- County_race_3[,-c(1,2,3,4,6,7, 32:34)]
+
+County_race_df <- County_race_df%>%
+  select(c(COUNTY, White_20, Black_20, AIAA_20, API_20))
+
+
+
+
+Housing <- read.csv("./Data/Raw/nhgis0003_ds244_20195_county.csv")
+
+Housing <- Housing %>%
+  filter(STATE == "North Carolina") %>%
+  rename(Mobile_Home=AL0AE010)%>%
+  select(c(COUNTY, GEOID, Mobile_Home))
+
+
+
+Total_pop <- read.csv("./Data/Raw/County_Pop.csv")
+
+Total_pop$COUNTY <- gsub(", North Carolina", '', Total_pop$COUNTY)
+
+Total_pop$POP <- as.numeric(gsub(",", '', Total_pop$POP))
+
+
+
+incomePerCap <- read.csv("./Data/Raw/incomepercap.csv")
+
+incomePerCap <- incomePerCap %>%
+  filter(STATE == "North Carolina") %>%
+  rename(Inc_Per_Cap = ALX5E001)
+
+
+
+df_list <- list(County_race_df, HMP_NC_Benefits, Housing, Total_pop, incomePerCap)
+
+disaster_data <- df_list %>% reduce(full_join, by = 'COUNTY')
+
+disaster_data <- disaster_data[-c(101),]
+
+coastal_disaster_data <- disaster_data %>%
+  mutate(min_pop = (Black_20+AIAA_20+API_20)/POP) %>%
+  mutate(FEMAAmountperpop = totalProjectAmount/POP) %>%
+  filter(COUNTY %in% c("Beaufort County", "Bertie County","Brunswick County", "Camden County", "Carteret County", "Chowan County", "Craven County", "Currituck County", "Dare County","Gates County", "Hertford County", "Hyde County", "New Hanover County", "Onslow County", "Pamlico County", "Pasquotank County", "Pender County", "Perquimans County","Tyrrell County", "Washington County")) %>%
+  select(-one_of("GEOID", "STATE"))%>%
+   rename(Income_Per_Cap = Inc_Per_Cap, Number_MobileHomes = Mobile_Home, Minority_Population_PerCap = min_pop)
+
+write.csv(coastal_disaster_data, "/Data/Processed")
+  
+```
+
+```{r}
+library(sf)
+library(mapview)
+getwd()
+setwd("C:/Users/lwa8/Documents/R/ENV872/Alexander_ENV872_EDA_FinalProject")
+counties_sf<- st_read('./Data/Raw/cb_2018_us_county_20m.shp') %>% 
+  filter(STATEFP == 37) %>%
+  mutate(NAME = paste(NAME, "County"))
+
+ mapview(counties_sf)
+ 
+ disaster_data_spatial <- merge(counties_sf, coastal_disaster_data, by.x = "NAME", by.y = "COUNTY", all = T)
+ 
+ disaster_data_spatial <- disaster_data_spatial %>%
+    filter(NAME %in% c("Beaufort County", "Bertie County","Brunswick County", "Camden County", "Carteret County", "Chowan County", "Craven County", "Currituck County", "Dare County","Gates County", "Hertford County", "Hyde County", "New Hanover County", "Onslow County", "Pamlico County", "Pasquotank County", "Pender County", "Perquimans County","Tyrrell County", "Washington County")) %>%
+   rename(Income_Per_Cap = Inc_Per_Cap, Number_MobileHomes = Mobile_Home)
+ 
+ 
+ 
+ mapview(disaster_data_spatial, zcol = "Mobile_Home")
+ mapview(disaster_data_spatial, zcol = "totalProjectAmount")
+ mapview(disaster_data_spatial, zcol = "Black_20")
+ mapview(disaster_data_spatial, zcol = "min_pop")
+ mapview(disaster_data_spatial, zcol = "FEMAAmountperpop")
+ mapview(disaster_data_spatial, zcol = "Inc_Per_Cap")
+ 
+ 
+ counties <- st_read(system.file("shape/nc.shp", package = "sf"), quiet = T)
+ mapview(counties)
+```
+
+```{r}
+
+library(knitr)
+library(data.table)
+summary_df <- summarise(coastal_disaster_data,
+                        Average_Pop = sum(POP)/20,
+                        Max_Pop = max(POP),
+                        Min_Pop = min(POP),
+                        Average_Minority_PerCap = sum(Minority_Population_PerCap)/20,
+                        Max_Minority_Pop_PerCap = max(Minority_Population_PerCap),
+                        Min_Minority_Pop_PerCap = min(Minority_Population_PerCap),
+                        Average_Number_Mobile_Homes = sum(Number_MobileHomes)/20,
+                        Max_Number_Mobile_Homes = max(Number_MobileHomes),
+                        Min_Number_Mobile_Homes = min(Number_MobileHomes),
+                        Average_Income_PerCap = sum(Income_Per_Cap)/20,
+                        Max_Income_PerCap = max(Income_Per_Cap),
+                        Min_Income_PerCap = min(Income_Per_Cap),
+                        Average_HMA_Funding = sum(totalProjectAmount)/20,
+                        Max_HMA_Funding = max(totalProjectAmount),
+                        Min_HMA_Funding = min(totalProjectAmount))
+
+
+
+summary_df <- format(summary_df, scientific = F, digits = 2)
+
+summary_df_t <- transpose(summary_df)
+
+rownames(summary_df_t) <- colnames(summary_df)
+colnames(summary_df_t)<- ""
+
+summary_df_t <- as.data.frame((summary_df_t))
+kable(summary_df_t, caption = "Summary Statistics for NC Coastal Counties")
+
+
+```
+
+
+```{r}
+
+regression <- lm(FEMAAmountperpop ~ min_pop + Inc_Per_Cap + Mobile_Home, coastal_disaster_data)
+
+summary(regression)
+
+
+```
+```{r}
+
+ggplot(coastal_disaster_data)+
+  geom_bar(aes(x = COUNTY, y = totalProjectAmount), stat = "identity")
+
+ggplot(coastal_disaster_data)+
+  geom_bar(aes(x = COUNTY, y = min_pop), stat = "identity")
+
+
+```
+
+```{r}
+
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Minority_Population_PerCap), alpha = 0.5, color = "red") +
+  labs(title = "Hazard Mitigation Assistance and Minority Population Per Capita", subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Number_MobileHomes), alpha = 0.5, color = "red")+
+  labs(title = "Hazard Mitigation Assistance Per Capita and Number of Mobile Homes", subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Income_Per_Cap), alpha = 0.5, color = "red")+
+  labs(title = "Hazard Mitigation Assistance and Income Per Capita", subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+
+```
+
+
