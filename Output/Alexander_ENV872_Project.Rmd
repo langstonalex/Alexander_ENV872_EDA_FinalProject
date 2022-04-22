@@ -5,9 +5,9 @@ output:
     fig_caption: yes
     number_sections: yes
 geometry: margin=2.54cm
-title: "Insert title of project here"
-subtitle: "Web address for GitHub repository"
-author: "Name"
+title: "The Effect of Race, Income, and Vulnerability on FEMA Hazard Mitigation Funding"
+subtitle: "https://github.com/langstonalex/Alexander_ENV872_EDA_FinalProject.git"
+author: "Langston Alexander"
 fontsize: 12pt
 mainfont: Times New Roman
 
@@ -36,6 +36,10 @@ library(scales)
 
 # Set your ggplot theme
 
+mytheme <- theme_classic() +
+  theme(axis.text = element_text(color = "black"))
+theme_set(mytheme)
+
 # Load your datasets
 
 coastal_disaster_data <- read.csv("./Data/Processed/finaldataset.csv")
@@ -49,38 +53,177 @@ disaster_data_spatial <- disaster_data_spatial %>%
 
 # Rationale and Research Questions
 
+Climate change, primarily through thermal-expansion and melting polar icecaps, could cause as much as 20 inches of sea-level rise. This amount of sea-level rise will bring with it significant increases in flooding throughout the coastal plain of North Carolina, impacting thousands of peoples homes and businesses and causing millions of dollars in lost economic potential. Although greenhouse gas mitigation will help to avoid the worst possible outcomes of sea-level rise, as much as a 26% increase in flooding will occur due to historic emissions. Communities must adapt to an increase in flood frequency if these baked in damages are to be avoided. 
 
+Currently, the Federal Emergency Management Agency (FEMA) manages federal policy on natural hazard mitigation and adaptation. Through a variety of competitive grant programs, FEMA funds local efforts to strengthen infrastructure, buildings, ecosystems, and services against oncoming flooding. Recently, though, studies have shown that these grant programs do not always end up in the hands of those most vulnerable. In this paper, I will investigate whether FEMA hazard mitigation funding is predicted by levels of race, income, or physical vulnerability for counties in coastal North Carolina. The 20 coastal counties I investigate in this paper are designated as coastal under North Carolina's Coastal Area Management Act.
 
-
+## Question 1: Is amount of FEMA hazard mitigation assistance predicted by race, income, or vulnerability in coastal NC counties?
 
 \newpage
 
 # Dataset Information
 
+The data for this paper was sourced from FEMA and the U.S. Census. From FEMA I used their Hazard Mitigation Assistance Projects dataset which lists every hazard mitigation project funded through FEMA across the U.S. from 1970-2022 by state and county, and listing the total dollars spent on the project. I subsetted this data to only include the coastal counties of North Carolina and summed the total amount spent on hazard mitigation for each county. I then divided this total funding amount by the total population of the county to get funding per capita. I did this to try and counteract the bias toward more populated areas receiving more funding.  
 
+From the U.S. Census I pulled racial, housing, and economic data by county, again subsetting by coastal North Carolina counties. For the racial component I used the decennial Census data on raw number of Black, non-white Hispanic, Asian, other minorities by counties. I summed these populations together, divided by the total population in a county and multiplied by 100 to get the percentage of a county made up of minorities. 
+
+For housing I simply used the raw number of mobile homes by county from the U.S. Census. I used the number of mobile homes to operationalize the concept of physical vulnerability. Mobile homes are some of the most vulnerable to flooding and are often located in less desirable areas that may be susceptible to flooding. 
+
+For economic data I used income per capita data by county from the U.S Census. 
+
+Once cleaned and wrangled, I combined these datasets by county. 
+
+To get county spatial data, I used the North Carolina county spatial dataset we used in class. I combined these datasets to create a single dataset with all spatial, racial, economic, and housing data. 
+
+In Table 1 below see how these variables range across the 20 coastal counties. 
+
+\newpage
+
+```{r summary stats, echo=FALSE, fig.cap= "Summary Statistics"}
+summary_df <- summarise(coastal_disaster_data,
+                        Average_Pop = sum(POP)/20,
+                        Max_Pop = max(POP),
+                        Min_Pop = min(POP),
+                        Average_Minority_Percent = sum(Minority_Population_PerCap)/20,
+                        Max_Minority_Pop_Percent = max(Minority_Population_PerCap),
+                        Min_Minority_Pop_Percent = min(Minority_Population_PerCap),
+                        Average_Number_Mobile_Homes = sum(Number_MobileHomes)/20,
+                        Max_Number_Mobile_Homes = max(Number_MobileHomes),
+                        Min_Number_Mobile_Homes = min(Number_MobileHomes),
+                        Average_Income_PerCap = sum(Income_Per_Cap)/20,
+                        Max_Income_PerCap = max(Income_Per_Cap),
+                        Min_Income_PerCap = min(Income_Per_Cap),
+                        Average_HMA_Funding = sum(totalProjectAmount)/20,
+                        Max_HMA_Funding = max(totalProjectAmount),
+                        Min_HMA_Funding = min(totalProjectAmount))
+
+
+
+summary_df <- format(summary_df, scientific = F, digits = 2)
+
+summary_df_t <- data.frame(transpose(summary_df))
+
+rownames(summary_df_t) <- colnames(summary_df)
+colnames(summary_df_t)<- ""
+
+summary_df_t <- as.data.frame((summary_df_t))
+kable(summary_df_t, caption = "Summary Statistics for NC Coastal Counties")
+```
 
 \newpage
 
 # Exploratory Analysis 
 
+I explored this data set through a series of bar charts and maps.
 
+For each variable I created a bar chart by county to see how counties compared to each other in terms of FEMA funding per capita (Figure 1), minority populations (Figure 2), number of mobile homes(Figure 3), and income per capita(Figure 4). From each of these bar charts we see a wide range between the 20 counties. For example, in terms of FEMA funding per capita Perquimans County has received practically 0 dollars per capita while Hyde County has received over 1600 dollars per capita. While differences in the counties are evident with these bar charts, it is unclear if there is any connections between the different variables.
+
+To visually explore patterns between these four variables, I constructed 3 maps with FEMA funding per capita as the base layer and each of the 3 independent variables layered on top. Again, most of these maps do not show any discernible pattern. In Figure 5, we see that counties with both high and low percentages of minority populations receive less funding than those with middling minority populations. In Figure 6, we begin to see a pattern where counties with low numbers of mobile homes receive more funding per capita. But, it is hard to make out how strong this relationship is. In Figure 7, there is again a slight pattern where poorer counties may be getting more funding per capita, but again the pattern is hard to discern. 
+
+
+```{r bar chart1, echo=FALSE, fig.cap= "FEMA Funding Per Capita for Hazard Mitigation By County"}
+
+boxplot1 <- coastal_disaster_data
+boxplot1$COUNTY <- factor(boxplot1$COUNTY,                                   
+                  levels = boxplot1$COUNTY[order(boxplot1$FEMAAmountperpop, decreasing = TRUE)])
+
+ggplot(boxplot1)+
+  geom_bar(aes(x = COUNTY, y = FEMAAmountperpop,  fill = COUNTY), stat = "identity")+
+  scale_y_continuous(labels = comma)+
+  scale_fill_grey()+
+  theme(legend.position = "none")+
+  labs(y = "FEMA Funding Amount Per Capita (USD)")+
+  coord_flip()
+```
+
+```{r bar chart2, echo=FALSE, fig.cap= "Percent Minority By County"}
+boxplot2 <- coastal_disaster_data
+boxplot2$COUNTY <- factor(boxplot2$COUNTY,                                   
+                  levels = boxplot2$COUNTY[order(boxplot2$Minority_Population_PerCap, decreasing = TRUE)])
+
+ggplot(boxplot2)+
+  geom_bar(aes(x = COUNTY, y = Minority_Population_PerCap,  fill = COUNTY), stat = "identity")+
+  scale_fill_grey()+
+  theme(legend.position = "none")+
+  labs( y = "Percent Minority Population")+
+  coord_flip()
+```
+
+```{r bar chart3, echo=FALSE, fig.cap= "Total Number of Mobile Homes By County"}
+boxplot3 <- coastal_disaster_data
+boxplot3$COUNTY <- factor(boxplot3$COUNTY,                                   
+                  levels = boxplot3$COUNTY[order(boxplot3$Number_MobileHomes, decreasing = TRUE)])
+
+ggplot(boxplot3)+
+  geom_bar(aes(x = COUNTY, y = Number_MobileHomes,  fill = COUNTY), stat = "identity")+
+  scale_fill_grey()+
+  theme(legend.position = "none")+
+  labs(y = "Number of Mobile Homes")+
+  coord_flip()
+
+```
+
+```{r bar chart4, echo=FALSE, fig.cap= "Income Per Capita By County"}
+boxplot4 <- coastal_disaster_data
+boxplot4$COUNTY <- factor(boxplot4$COUNTY,                                   
+                  levels = boxplot4$COUNTY[order(boxplot4$Income_Per_Cap, decreasing = TRUE)])
+
+ggplot(boxplot4)+
+  geom_bar(aes(x = COUNTY, y = Income_Per_Cap,  fill = COUNTY ), stat = "identity")+
+  scale_fill_grey()+
+  theme(legend.position = "none")+
+  labs(y = "Income Per Capita (USD)")+
+  coord_flip()
+
+```
+
+```{r map1, echo=FALSE, warning=FALSE, fig.cap= "Hazard Mitigation Assistance and Minority Population Percent"}
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Minority_Population_Percent), alpha = 0.5, color = "red") +
+  labs(subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+
+```
+
+```{r map2, echo=FALSE, warning=FALSE, fig.cap= "Hazard Mitigation Assistance Per Capita and Number of Mobile Homes"}
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Number_MobileHomes), alpha = 0.5, color = "red")+
+  labs(subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+
+```
+
+```{r map3, echo=FALSE, warning=FALSE, fig.cap= "Hazard Mitigation Assistance and Income Per Capita"}
+ggplot(disaster_data_spatial,aes( fill = FEMAAmountperpop))+
+  geom_sf()+
+  stat_sf_coordinates(aes(size = Income_Per_Cap), alpha = 0.5, color = "red")+
+  labs(subtitle = "NC Coastal Counties", fill = "HMA Per Cap")
+
+```
 
 \newpage
 
 # Analysis
 
+To further test the relationship between FEMA funding per capita and percent minority, income per capita, and number of mobile homes I ran a multi-linear regression. None of the 3 independent variables had p-values less than 0.05 (minority population = 0.25, income per capita = 0.12, # mobile homes = 0.69) meaning that for each we cannot reject the null hypothesis that the independent variable suggesting there is no statistical relationship. The R-Squared was 0.18 suggesting the independent variables only explained 18% of the variance in the dependent variable. 
+
+To see if the data fit the model in the first place, I ran a residual vs. fitted plot, normal Q-Q plot, scale-location plot, and a residual vs. leverage plot (see Figure 8). In the residual vs. fitted plot we see an outlier, Hyde County, that suggest the data may be homoskedastic, violating one the assumptions when running a linear model. 
 
 
-## Question 1: <insert specific question here and add additional subsections for additional questions below, if needed>
+```{r regression, echo=FALSE, fig.cap="Fit of Model Graphs"}
+regression <- lm(FEMAAmountperpop ~ Minority_Population_PerCap + Income_Per_Cap + Number_MobileHomes, coastal_disaster_data)
 
-## Question 2: 
+par(mfrow = c(2,2))
+plot(regression)
 
-
+```
 
 
 \newpage
 
 # Summary and Conclusions
 
+In summary, there is no relationship that I could see between FEMA hazard mitigation funding and either minority population, number of mobile homes, or income per capita. There are several avenues of continuing research that could help to better understand the phenomenon of disparate FEMA funding. One is to use more granular geographic data in the analysis. Instead of using county data, census block data might be more appropriate for this study. I also didn't look at how exposed each county is to flooding hazards. Counties with more exposure to hazards could take hazards more seriously and therefore apply to more grants. 
 
+As sea-level rise and flooding continues to batter coastal towns and cities it is vital to understand which communities are getting funding and which are not. To build sound policy we must first know where funding has gone and continues to go and why. 
 
